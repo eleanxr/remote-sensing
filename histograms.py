@@ -11,3 +11,6 @@ def histogram_all():
         band_hist = cv2.calcHist([band_image], [0], None, [256], [1, 256])
         plt.plot(band_hist)
     plt.show()
+    
+if __name__ == '__main__':
+    histogram_all()

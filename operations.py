@@ -21,6 +21,16 @@ def main():
         red_image = cv2.imread(constants.base_name_named % (month, RED))
         nir_image = cv2.imread(constants.base_name_named % (month, NIR))
         
+        print 'Subsetting...'
+        #red_image = red_image[1231:1924, 4418:4859]
+        #nir_image = nir_image[1231:1924, 4418:4859]
+        red_image = red_image[4418:4859, 1231:1924]
+        nir_image = nir_image[4418:4859, 1231:1924]
+
+        
+        cv2.imwrite('subset_red_%s.tif' % month, red_image)
+        cv2.imwrite('subset_nir_%s.tif' % month, nir_image)
+        
         print "Computing NDVI..."
         ndvi_image = ndvi(red_image, nir_image)
         
@@ -30,11 +40,12 @@ def main():
         
         print "Computing histogram..."
         read_image = cv2.imread(filename)
-        histograms[month] = cv2.calcHist([read_image], [0], None, [256], [1, 256])
+        histograms[month] = cv2.calcHist([read_image], [0], None, [256], [0, 256])
 
     for month, hist in histograms.iteritems():
         plt.plot(hist, lw=2, label = month)
     plt.legend()
+    plt.xlim([0, 128])
     plt.show()
 
 if __name__ == '__main__':

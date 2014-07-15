@@ -11,7 +11,7 @@ def ndvi(red, nir):
     nir_float = nir.astype(float)
     return 256 * np.divide(nir_float - red_float, nir_float + red_float)
 
-def compute_roi(x_range, y_range):
+def compute_roi(x_range, y_range, name):
     RED = 4
     NIR = 5
     histograms = {}
@@ -32,19 +32,20 @@ def compute_roi(x_range, y_range):
         ndvi_image = ndvi(red_image, nir_image)
         
         print "Writing output..."
-        filename = 'ndvi_%s.tif' % month
+        filename = 'ndvi_%s_%s.tif' % (name, month)
         cv2.imwrite(filename, ndvi_image)
         
         print "Computing histogram..."
         read_image = cv2.imread(filename)
-        histograms[month] = cv2.calcHist([read_image], [0], None, [256], [0, 256])
+        histograms[month] = cv2.calcHist([read_image], [0], None, [256], [0, 256]) / read_image.size
     return histograms
 
-def plot_histograms(histograms):
+def plot_histograms(histograms, plot_obj, title):
     for month, hist in histograms.iteritems():
-        plt.plot(hist, lw=2, label = month)
-    plt.legend()
-    plt.xlim([0, 128])    
+        plot_obj.plot(hist, lw=2, label = month)
+    plot_obj.legend()
+    plot_obj.set_title(title)
+    plot_obj.set_xlim([0, 128])
 
 boundary = 4648
 xmin = 1231
@@ -53,7 +54,10 @@ ymin = 4418
 ymax = 4859
 
 def main():
-    plot_histograms(compute_roi((xmin, xmax), (ymin, ymax)))
+    fig, (whole, north, south) = plt.subplots(nrows = 3)
+    plot_histograms(compute_roi((xmin, xmax), (ymin, ymax), 'Region'), whole, 'Region')
+    plot_histograms(compute_roi((xmin, xmax), (boundary, ymax), 'South'), south, 'South')
+    plot_histograms(compute_roi((xmin, xmax), (ymin, boundary), 'North'), north, 'North')
     plt.show()
 
 if __name__ == '__main__':

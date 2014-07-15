@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 
 import constants
 
-months = ['SEPT', 'DEC', 'MAR']
+months = ['JUN', 'SEPT', 'DEC', 'MAR']
 
 def ndvi(red, nir):
     red_float = red.astype(float)

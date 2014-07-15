@@ -40,6 +40,11 @@ def compute_roi(x_range, y_range):
         histograms[month] = cv2.calcHist([read_image], [0], None, [256], [0, 256])
     return histograms
 
+def plot_histograms(histograms):
+    for month, hist in histograms.iteritems():
+        plt.plot(hist, lw=2, label = month)
+    plt.legend()
+    plt.xlim([0, 128])    
 
 boundary = 4648
 xmin = 1231
@@ -48,11 +53,7 @@ ymin = 4418
 ymax = 4859
 
 def main():
-    histograms = compute_roi((xmin, xmax), (ymin, ymax))
-    for month, hist in histograms.iteritems():
-        plt.plot(hist, lw=2, label = month)
-    plt.legend()
-    plt.xlim([0, 128])
+    plot_histograms(compute_roi((xmin, xmax), (ymin, ymax)))
     plt.show()
 
 if __name__ == '__main__':

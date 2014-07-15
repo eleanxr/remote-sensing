@@ -11,10 +11,9 @@ def ndvi(red, nir):
     nir_float = nir.astype(float)
     return 256 * np.divide(nir_float - red_float, nir_float + red_float)
 
-def main():
+def compute_roi(x_range, y_range):
     RED = 4
     NIR = 5
-    
     histograms = {}
     for month in months:
         print 'Month = %s' % month
@@ -22,10 +21,8 @@ def main():
         nir_image = cv2.imread(constants.base_name_named % (month, NIR))
         
         print 'Subsetting...'
-        #red_image = red_image[1231:1924, 4418:4859]
-        #nir_image = nir_image[1231:1924, 4418:4859]
-        red_image = red_image[4418:4859, 1231:1924]
-        nir_image = nir_image[4418:4859, 1231:1924]
+        red_image = red_image[y_range[0]:y_range[1], x_range[0]:x_range[1]]
+        nir_image = nir_image[y_range[0]:y_range[1], x_range[0]:x_range[1]]
 
         
         cv2.imwrite('subset_red_%s.tif' % month, red_image)
@@ -41,7 +38,17 @@ def main():
         print "Computing histogram..."
         read_image = cv2.imread(filename)
         histograms[month] = cv2.calcHist([read_image], [0], None, [256], [0, 256])
+    return histograms
 
+
+boundary = 4648
+xmin = 1231
+xmax = 1924
+ymin = 4418
+ymax = 4859
+
+def main():
+    histograms = compute_roi((xmin, xmax), (ymin, ymax))
     for month, hist in histograms.iteritems():
         plt.plot(hist, lw=2, label = month)
     plt.legend()

@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 
 import constants
 
+import os
+
 months = ['JUN', 'SEPT', 'DEC', 'MAR']
 
 def ndvi(red, nir):
@@ -11,7 +13,7 @@ def ndvi(red, nir):
     nir_float = nir.astype(float)
     return 256 * np.divide(nir_float - red_float, nir_float + red_float)
 
-def compute_roi(x_range, y_range, name):
+def compute_roi(x_range, y_range, name, outdir=''):
     RED = 4
     NIR = 5
     histograms = {}
@@ -25,14 +27,16 @@ def compute_roi(x_range, y_range, name):
         nir_image = nir_image[y_range[0]:y_range[1], x_range[0]:x_range[1]]
 
         
-        cv2.imwrite('subset_red_%s.tif' % month, red_image)
-        cv2.imwrite('subset_nir_%s.tif' % month, nir_image)
+        cv2.imwrite(
+            os.path.join(outdir, 'subset_red_%s_%s.tif' % (name, month)), red_image)
+        cv2.imwrite(
+            os.path.join(outdir, 'subset_nir_%s_%s.tif' % (name, month)), nir_image)
         
         print "Computing NDVI..."
         ndvi_image = ndvi(red_image, nir_image)
         
         print "Writing output..."
-        filename = 'ndvi_%s_%s.tif' % (name, month)
+        filename = os.path.join(outdir, 'ndvi_%s_%s.tif' % (name, month))
         cv2.imwrite(filename, ndvi_image)
         
         print "Computing histogram..."
@@ -54,10 +58,14 @@ ymin = 4418
 ymax = 4859
 
 def main():
+    output_path = 'output_images'
+    if not os.path.exists(output_path):
+        os.mkdir(output_path)
+    
     fig, (whole, north, south) = plt.subplots(nrows = 3)
-    plot_histograms(compute_roi((xmin, xmax), (ymin, ymax), 'Region'), whole, 'Region')
-    plot_histograms(compute_roi((xmin, xmax), (boundary, ymax), 'South'), south, 'South')
-    plot_histograms(compute_roi((xmin, xmax), (ymin, boundary), 'North'), north, 'North')
+    plot_histograms(compute_roi((xmin, xmax), (ymin, ymax), 'Region', output_path), whole, 'Region')
+    plot_histograms(compute_roi((xmin, xmax), (boundary, ymax), 'South', output_path), south, 'South')
+    plot_histograms(compute_roi((xmin, xmax), (ymin, boundary), 'North', output_path), north, 'North')
     plt.show()
 
 if __name__ == '__main__':

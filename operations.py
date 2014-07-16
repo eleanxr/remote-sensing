@@ -11,7 +11,7 @@ months = ['JUN', 'SEPT', 'DEC', 'MAR']
 def ndvi(red, nir):
     red_float = red.astype(float)
     nir_float = nir.astype(float)
-    return 256 * np.divide(nir_float - red_float, nir_float + red_float)
+    return np.divide(nir_float - red_float, nir_float + red_float)
 
 def compute_roi(x_range, y_range, name, outdir=''):
     RED = 4
@@ -40,16 +40,18 @@ def compute_roi(x_range, y_range, name, outdir=''):
         cv2.imwrite(filename, ndvi_image)
         
         print "Computing histogram..."
-        read_image = cv2.imread(filename)
-        histograms[month] = cv2.calcHist([read_image], [0], None, [256], [0, 256]) / read_image.size
+        hist, edges = np.histogram(ndvi_image, 128)
+        hist = hist / float(ndvi_image.size)
+        histograms[month] = (hist, edges)
     return histograms
 
 def plot_histograms(histograms, plot_obj, title):
-    for month, hist in histograms.iteritems():
-        plot_obj.plot(hist, lw=2, label = month)
+    for month, (hist, edges) in histograms.iteritems():
+        centers = 0.5 * (edges[1:] + edges[:-1])
+        plot_obj.plot(centers, hist, lw=2, label = month)
     plot_obj.legend()
     plot_obj.set_title(title)
-    plot_obj.set_xlim([0, 128])
+    plot_obj.set_xlim([0, 0.3])
 
 boundary = 4648
 xmin = 1231

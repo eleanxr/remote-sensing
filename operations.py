@@ -52,6 +52,7 @@ def plot_histograms(histograms, plot_obj, title):
     plot_obj.legend()
     plot_obj.set_title(title)
     plot_obj.set_xlim([0, 0.3])
+    plot_obj.set_ylim([0, 0.25])
 
 boundary = 4648
 xmin = 1231

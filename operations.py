@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+import csv
 
 import constants
 
@@ -17,32 +18,38 @@ def compute_roi(x_range, y_range, name, outdir=''):
     RED = 4
     NIR = 5
     histograms = {}
-    for month in months:
-        print 'Month = %s' % month
-        red_image = cv2.imread(constants.base_name_named % (month, RED))
-        nir_image = cv2.imread(constants.base_name_named % (month, NIR))
-        
-        print 'Subsetting...'
-        red_image = red_image[y_range[0]:y_range[1], x_range[0]:x_range[1]]
-        nir_image = nir_image[y_range[0]:y_range[1], x_range[0]:x_range[1]]
-
-        
-        cv2.imwrite(
-            os.path.join(outdir, 'subset_red_%s_%s.tif' % (name, month)), red_image)
-        cv2.imwrite(
-            os.path.join(outdir, 'subset_nir_%s_%s.tif' % (name, month)), nir_image)
-        
-        print "Computing NDVI..."
-        ndvi_image = ndvi(red_image, nir_image)
-        
-        print "Writing output..."
-        filename = os.path.join(outdir, 'ndvi_%s_%s.tif' % (name, month))
-        cv2.imwrite(filename, ndvi_image)
-        
-        print "Computing histogram..."
-        hist, edges = np.histogram(ndvi_image, 128)
-        hist = hist / float(ndvi_image.size)
-        histograms[month] = (hist, edges)
+    with open(os.path.join(outdir, '%s.csv' % name), 'w') as dataout:
+        datawriter = csv.writer(dataout)
+        datawriter.writerow(['month', 'mean', 'sigma'])
+        for month in months:
+            print 'Month = %s' % month
+            red_image = cv2.imread(constants.base_name_named % (month, RED))
+            nir_image = cv2.imread(constants.base_name_named % (month, NIR))
+            
+            print 'Subsetting...'
+            red_image = red_image[y_range[0]:y_range[1], x_range[0]:x_range[1]]
+            nir_image = nir_image[y_range[0]:y_range[1], x_range[0]:x_range[1]]
+    
+            
+            cv2.imwrite(
+                os.path.join(outdir, 'subset_red_%s_%s.tif' % (name, month)), red_image)
+            cv2.imwrite(
+                os.path.join(outdir, 'subset_nir_%s_%s.tif' % (name, month)), nir_image)
+            
+            print "Computing NDVI..."
+            ndvi_image = ndvi(red_image, nir_image)
+            mean = np.mean(ndvi_image)
+            sigma = np.std(ndvi_image)
+            datawriter.writerow([month, mean, sigma])
+            
+            print "Writing output..."
+            filename = os.path.join(outdir, 'ndvi_%s_%s.tif' % (name, month))
+            cv2.imwrite(filename, ndvi_image)
+            
+            print "Computing histogram..."
+            hist, edges = np.histogram(ndvi_image, 128)
+            hist = hist / float(ndvi_image.size)
+            histograms[month] = (hist, edges)
     return histograms
 
 def plot_histograms(histograms, plot_obj, title):

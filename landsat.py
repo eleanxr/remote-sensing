@@ -2,6 +2,13 @@ import os
 import tarfile
 import sys
 
+from osgeo import gdal, gdalnumeric, ogr, osr
+
+import numpy
+
+import logging
+logger = logging.getLogger(os.path.basename(__file__))
+
 LANDSAT_BANDS = [
     None,
     {"Name": "Coastal Aerosol", "Range": (0.43e-6, 0.45e-6), "Resolution": 30.0}, #1
@@ -25,6 +32,11 @@ def extract_landsat_bundle(landsat_download, output_path):
     archive.extractall(output_path)
     
 def process_landsat_bundle(landsat_download, output_path, raster_transform):
+    """
+    Applies a transformation to a landsat bundle.
+    Returns the identifier for the bundle.
+    """
+    identifier = os.path.splitext(os.path.splitext(os.path.basename(landsat_download))[0])[0]
     archive = tarfile.open(landsat_download)
     rasters = filter(lambda f: os.path.splitext(f.name)[1].lower() == '.tif', archive.getmembers())
     # Extract them.
@@ -33,7 +45,24 @@ def process_landsat_bundle(landsat_download, output_path, raster_transform):
     for raster in rasters:
         raster_path = os.path.join(output_path, raster.name)
         raster_transform(raster_path)
-    
+    return identifier
+        
+def combine_landsat_bands(path, ident, f, band_ids):
+    """
+    Perform some function to combine a set of bands in landsat imagery.
+    - ident : The identifier for the image bundle
+    - f : The function to apply. Takes a single argument, a list of numpy arrays.
+    - band_ids : The band ids to map (in the same order as the argument to f)
+    """
+    band_images = []
+    for band_id in band_ids:
+        raster_file = os.path.join(path, '%s_B%d.tif' % (ident, band_id))
+        logger.debug('Loading band raster %s', raster_file)
+        if not os.path.exists(raster_file):
+            raise IOError("Failed to locate file %s" % raster_file)
+        band_raster = gdalnumeric.LoadFile(raster_file)
+        band_images.append(band_raster)
+    return f(band_images)
     
 def main():
     if len(sys.argv) < 2:

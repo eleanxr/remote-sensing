@@ -14,6 +14,13 @@ def ndvi(red, nir):
     nir_float = nir.astype(float)
     return np.divide(nir_float - red_float, nir_float + red_float)
 
+def savi(red, nir):
+    red_float = red.astype(float)
+    nir_float = nir.astype(float)
+    l = 0.5 # suggested soil correction.
+    return np.divide(nir_float - red_float, nir_float + red_float + l) * (1 + l)
+
+
 def compute_roi(x_range, y_range, name, outdir=''):
     RED = 4
     NIR = 5
@@ -37,14 +44,14 @@ def compute_roi(x_range, y_range, name, outdir=''):
                 os.path.join(outdir, 'subset_nir_%s_%s.tif' % (name, month)), nir_image)
             
             print "Computing NDVI..."
-            ndvi_image = ndvi(red_image, nir_image)
+            ndvi_image = savi(red_image, nir_image)
             mean = np.mean(ndvi_image)
             sigma = np.std(ndvi_image)
             datawriter.writerow([month, mean, sigma])
             
             print "Writing output..."
             filename = os.path.join(outdir, 'ndvi_%s_%s.tif' % (name, month))
-            cv2.imwrite(filename, ndvi_image)
+            cv2.imwrite(filename, 256 * ndvi_image)
             
             print "Computing histogram..."
             hist, edges = np.histogram(ndvi_image, 128)

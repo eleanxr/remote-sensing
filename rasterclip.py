@@ -1,8 +1,11 @@
 import operator
 from osgeo import gdal, gdalnumeric, ogr, osr
 from PIL import Image, ImageDraw
+import numpy
 
 import os, sys
+
+import subprocess
 
 # This function will convert the rasterized clipper shapefile to a
 # mask for use within GDAL.    
@@ -67,9 +70,9 @@ def stretch(a):
   im = im.point(lut)
   return imageToArray(im)
 
-def clip_raster(raster, shp, output):
+def clip_raster_good(raster, shp, output):
     # Load the source data as a gdalnumeric array
-    srcArray = gdalnumeric.LoadFile(raster)
+    srcArray = numpy.asarray([gdalnumeric.LoadFile(raster)])
     
     # Also load as a gdal image to get geotransform (world file) info
     srcImage = gdal.Open(raster)
@@ -89,7 +92,7 @@ def clip_raster(raster, shp, output):
     pxWidth = int(lrX - ulX)
     pxHeight = int(lrY - ulY)
     
-    clip = srcArray[ulY:lrY, ulX:lrX]
+    clip = srcArray[:, ulY:lrY, ulX:lrX]
     
     # Create a new geomatrix for the image
     geoTrans = list(geoTrans)
@@ -125,7 +128,21 @@ def clip_raster(raster, shp, output):
     # Save ndvi as an 8-bit jpeg for an easy, quick preview
     clip = clip.astype(gdalnumeric.uint8)
     gdalnumeric.SaveArray(clip, "%s.jpg" % output, format="JPEG")
-    
+
+def clip_raster_hack(raster, shp, output):
+    shapefile = '%s.shp' % shp
+    subprocess.call([
+        'gdalwarp',
+        '-cutline',
+        shapefile,
+        '-crop_to_cutline',
+        '-overwrite',
+        raster,
+        output + '.tif'])
+
+def clip_raster(raster,shp, output):
+    clip_raster_hack(raster,shp, output)
+
 def main():
     if len(sys.argv) < 4:
         print "Usage: %s <raster-file> <shapefile> <output>" % sys.argv[0]

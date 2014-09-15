@@ -7,6 +7,9 @@ import os, sys
 
 import subprocess
 
+import logging
+logger = logging.getLogger(__name__)
+
 # This function will convert the rasterized clipper shapefile to a
 # mask for use within GDAL.    
 def imageToArray(i):
@@ -130,17 +133,20 @@ def clip_raster_good(raster, shp, output):
     gdalnumeric.SaveArray(clip, "%s.jpg" % output, format="JPEG")
 
 def clip_raster_hack(raster, shp, output):
-    shapefile = '%s.shp' % shp
-    subprocess.call([
+    #shapefile = '%s.shp' % shp
+    args = [
         'gdalwarp',
         '-cutline',
-        shapefile,
+        shp,
         '-crop_to_cutline',
         '-overwrite',
         raster,
-        output + '.tif'])
+        output + '.tif']
+    logger.debug('Calling "%s"', ' '.join(args))
+    subprocess.call(' '.join(args), shell=True, stdout = sys.stdout, stderr = sys.stderr)
 
 def clip_raster(raster,shp, output):
+    logger.debug("Masking %s using %s to %s", raster, shp, output)
     clip_raster_hack(raster,shp, output)
 
 def main():

@@ -24,6 +24,17 @@ def extract_landsat_bundle(landsat_download, output_path):
     archive = tarfile.open(landsat_download)
     archive.extractall(output_path)
     
+def process_landsat_bundle(landsat_download, output_path, raster_transform):
+    archive = tarfile.open(landsat_download)
+    rasters = filter(lambda f: os.path.splitext(f.name)[1].lower() == '.tif', archive.getmembers())
+    # Extract them.
+    archive.extractall(output_path, rasters)
+    # Process them
+    for raster in rasters:
+        raster_path = os.path.join(output_path, raster.name)
+        raster_transform(raster_path)
+    
+    
 def main():
     if len(sys.argv) < 2:
         print "Usage: %s <output-path>" % sys.argv[0]

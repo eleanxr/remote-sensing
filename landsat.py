@@ -1,3 +1,7 @@
+import os
+import tarfile
+import sys
+
 LANDSAT_BANDS = [
     None,
     {"Name": "Coastal Aerosol", "Range": (0.43e-6, 0.45e-6), "Resolution": 30.0}, #1
@@ -15,3 +19,19 @@ LANDSAT_BANDS = [
     {"Name": "TIRS 1", "Range": (10.6e-6, 11.19e-6), "Resolution": 30.0 * 100.0}, #10
     {"Name": "TIRS 2", "Range": (11.5e-6, 12.51e-6), "Resolution": 30.0 * 100.0}, #11
 ]
+
+def extract_landsat_bundle(landsat_download, output_path):
+    archive = tarfile.open(landsat_download)
+    archive.extractall(output_path)
+    
+def main():
+    if len(sys.argv) < 2:
+        print "Usage: %s <output-path>" % sys.argv[0]
+        sys.exit(-1)
+    for archive in sys.argv[2:]:
+        print "Extracting %s" % archive
+        extract_landsat_bundle(archive, sys.argv[1])
+        
+if __name__ == '__main__':
+    main()
+    

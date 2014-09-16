@@ -31,14 +31,24 @@ def extract_landsat_bundle(landsat_download, output_path):
     archive = tarfile.open(landsat_download)
     archive.extractall(output_path)
     
-def process_landsat_bundle(landsat_download, output_path, raster_transform):
+def is_band(bands, tarinfo):
+    name = tarinfo.name.lower()
+    no_ext = os.path.splitext(name)[0]
+    logger.debug("Looking for specified bands in %s", tarinfo.name)
+    for band in bands:
+        if no_ext.endswith('_b%d' % band):
+            logger.debug("Found band %d in file '%s'", band, tarinfo.name)
+            return True
+    return False
+    
+def process_landsat_bundle(landsat_download, output_path, bands, raster_transform):
     """
     Applies a transformation to a landsat bundle.
     Returns the identifier for the bundle.
     """
     identifier = os.path.splitext(os.path.splitext(os.path.basename(landsat_download))[0])[0]
     archive = tarfile.open(landsat_download)
-    rasters = filter(lambda f: os.path.splitext(f.name)[1].lower() == '.tif', archive.getmembers())
+    rasters = filter(lambda i: is_band(bands, i), archive.getmembers())
     # Extract them.
     archive.extractall(output_path, rasters)
     # Process them

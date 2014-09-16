@@ -21,7 +21,7 @@ def process_raster(shapefile, output_path, raster_path):
     output_path = os.path.join(output_path, rasterfile)
     rasterclip.clip_raster(raster_path, shapefile, output_path)
 
-def clip_imagery(landsat_bundles, shapefile, output_path):
+def clip_imagery(landsat_bundles, shapefile, output_path, bands):
     """
     Clips a set of landsat images to a given shapefile.
     Returns a list of landsat scene ids.
@@ -31,7 +31,7 @@ def clip_imagery(landsat_bundles, shapefile, output_path):
     try:
         for bundle in landsat_bundles:
             logging.info("Processing %s in %s", bundle, tempdir)
-            bundle_id = landsat.process_landsat_bundle(bundle, tempdir, lambda f: process_raster(shapefile, output_path, f))
+            bundle_id = landsat.process_landsat_bundle(bundle, tempdir, bands, lambda f: process_raster(shapefile, output_path, f))
             ids.append(bundle_id)
     finally:
         shutil.rmtree(tempdir)
@@ -86,7 +86,7 @@ def main():
     if not os.path.exists(output_path):
         os.mkdir(output_path)
         
-    scene_ids = clip_imagery(files, shapefile, output_path)
+    scene_ids = clip_imagery(files, shapefile, output_path, [4, 5])
     
     with (open(os.path.join(output_path, 'results.csv'), 'w')) as dataout:
         csvfile = csv.writer(dataout)

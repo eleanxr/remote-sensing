@@ -9,6 +9,19 @@ import numpy
 import logging
 logger = logging.getLogger(os.path.basename(__file__))
 
+class Band:
+    COASTAL_AEROSOL = 1
+    BLUE = 2
+    GREEN = 3
+    RED = 4
+    NIR = 5
+    SWIR_1 = 6
+    SWIR_2 = 7
+    PAN_CHROMATIC = 8
+    CIRRUS = 9
+    TIRS_1 = 10
+    TIRS_2 = 11
+
 LANDSAT_BANDS = [
     None,
     {"Name": "Coastal Aerosol", "Range": (0.43e-6, 0.45e-6), "Resolution": 30.0}, #1
@@ -48,9 +61,12 @@ def process_landsat_bundle(landsat_download, output_path, bands, raster_transfor
     """
     identifier = os.path.splitext(os.path.splitext(os.path.basename(landsat_download))[0])[0]
     archive = tarfile.open(landsat_download)
-    rasters = filter(lambda i: is_band(bands, i), archive.getmembers())
+    members = archive.getmembers()
+    rasters = filter(lambda i: is_band(bands, i), members)
+    metadata = filter(lambda i: os.path.splitext(i.name)[1].lower() == '.txt', members)
     # Extract them.
-    archive.extractall(output_path, rasters)
+    archive.extractall(output_path, rasters + metadata)
+    # TODO Always retain the metadata
     # Process them
     for raster in rasters:
         raster_path = os.path.join(output_path, raster.name)

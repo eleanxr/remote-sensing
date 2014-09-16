@@ -50,7 +50,7 @@ def compute_ndvi(band_arrays):
     num = nir - red
     denom = nir + red
     result = numpy.divide(num, denom)
-    return numpy.ma.masked_invalid(result)
+    return result
 
 def compute_ndvi_vectorized(band_arrays):
     red = band_arrays[0]
@@ -85,23 +85,23 @@ def main():
     
     if not os.path.exists(output_path):
         os.mkdir(output_path)
-        
-    scene_ids = clip_imagery(files, shapefile, output_path, [4, 5])
+    scene_ids = clip_imagery(files, shapefile, output_path, [landsat.Band.RED, landsat.Band.NIR])
     
     with (open(os.path.join(output_path, 'results.csv'), 'w')) as dataout:
         csvfile = csv.writer(dataout)
-        csvfile.writerow(["scene_id", "mean", "std_dev"])
+        csvfile.writerow(["scene_id", "index", "mean", "std_dev"])
         
         numpy.seterr(divide='ignore')
         
+        index = 0
         for scene_id in scene_ids:
             logger.debug('Calling combiner for %s', scene_id)
-            result_raster = landsat.combine_landsat_bands(output_path, scene_id, compute_ndvi, [4, 5])
-            write_raster(result_raster, output_path, scene_id + '_index')
-            mean = numpy.mean(result_raster)
-            sigma = numpy.std(result_raster)
-            print mean, sigma
-            csvfile.writerow([scene_id, mean, sigma])
+            result_raster = landsat.combine_landsat_bands(output_path, scene_id, compute_savi, [landsat.Band.RED, landsat.Band.NIR])
+            write_raster(numpy.ma.masked_invalid(result_raster), output_path, scene_id + '_index')
+            mean = numpy.mean(numpy.ma.masked_array(result_raster, numpy.isnan(result_raster)))
+            sigma = numpy.std(numpy.ma.masked_array(result_raster, numpy.isnan(result_raster)))
+            csvfile.writerow([scene_id, index, mean, sigma])
+            index = index + 1
     
 if __name__ == '__main__':
     main()

@@ -1,6 +1,7 @@
 import os
 import tarfile
 import sys
+import shutil
 
 from osgeo import gdal, gdalnumeric, ogr, osr
 
@@ -54,9 +55,11 @@ def is_band(bands, tarinfo):
             return True
     return False
     
-def process_landsat_bundle(landsat_download, output_path, bands, raster_transform):
+def process_landsat_bundle(landsat_download, output_path, transform_path, bands, raster_transform):
     """
     Applies a transformation to a landsat bundle.
+    raster_transform is a function that takes a path to a raster and an output
+    path in which to save its results.
     Returns the identifier for the bundle.
     """
     identifier = os.path.splitext(os.path.splitext(os.path.basename(landsat_download))[0])[0]
@@ -66,11 +69,13 @@ def process_landsat_bundle(landsat_download, output_path, bands, raster_transfor
     metadata = filter(lambda i: os.path.splitext(i.name)[1].lower() == '.txt', members)
     # Extract them.
     archive.extractall(output_path, rasters + metadata)
-    # TODO Always retain the metadata
+    # Always retain the metadata
+    for f in metadata:
+        shutil.copy(os.path.join(output_path, f.name), transform_path)
     # Process them
     for raster in rasters:
         raster_path = os.path.join(output_path, raster.name)
-        raster_transform(raster_path)
+        raster_transform(raster_path, transform_path)
     return identifier
         
 def combine_landsat_bands(path, ident, f, band_ids):

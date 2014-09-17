@@ -14,7 +14,7 @@ from PIL import Image
 import logging
 logger = logging.getLogger(__name__)
 
-def process_raster(shapefile, output_path, raster_path):
+def process_raster(shapefile, raster_path, output_path):
     logger.debug('process_raster %s %s %s', shapefile, output_path, raster_path)
     rastername = os.path.basename(raster_path)
     rasterfile = os.path.splitext(rastername)[0]
@@ -31,7 +31,8 @@ def clip_imagery(landsat_bundles, shapefile, output_path, bands):
     try:
         for bundle in landsat_bundles:
             logging.info("Processing %s in %s", bundle, tempdir)
-            bundle_id = landsat.process_landsat_bundle(bundle, tempdir, bands, lambda f: process_raster(shapefile, output_path, f))
+            bundle_id = landsat.process_landsat_bundle(bundle, tempdir, output_path, bands,\
+                lambda f, p: process_raster(shapefile, f, p))
             ids.append(bundle_id)
     finally:
         shutil.rmtree(tempdir)

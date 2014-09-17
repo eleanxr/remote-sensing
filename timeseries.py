@@ -89,18 +89,21 @@ def main():
     
     with (open(os.path.join(output_path, 'results.csv'), 'w')) as dataout:
         csvfile = csv.writer(dataout)
-        csvfile.writerow(["scene_id", "index", "mean", "std_dev"])
+        csvfile.writerow(["scene_id", "index", "mean_ndvi", "std_dev_ndvi", "mean_savi", "std_savi"])
         
         numpy.seterr(divide='ignore')
         
         index = 0
         for scene_id in scene_ids:
             logger.debug('Calling combiner for %s', scene_id)
-            result_raster = landsat.combine_landsat_bands(output_path, scene_id, compute_savi, [landsat.Band.RED, landsat.Band.NIR])
-            write_raster(numpy.ma.masked_invalid(result_raster), output_path, scene_id + '_index')
-            mean = numpy.mean(numpy.ma.masked_array(result_raster, numpy.isnan(result_raster)))
-            sigma = numpy.std(numpy.ma.masked_array(result_raster, numpy.isnan(result_raster)))
-            csvfile.writerow([scene_id, index, mean, sigma])
+            means = {}
+            sigmas = {}
+            for f in compute_ndvi, compute_savi:
+                result_raster = landsat.combine_landsat_bands(output_path, scene_id, f, [landsat.Band.RED, landsat.Band.NIR])
+                write_raster(numpy.ma.masked_invalid(result_raster), output_path, scene_id + '_%s' % f.__name__)
+                means[f.__name__] = numpy.mean(numpy.ma.masked_array(result_raster, numpy.isnan(result_raster)))
+                sigmas[f.__name__] = numpy.std(numpy.ma.masked_array(result_raster, numpy.isnan(result_raster)))
+            csvfile.writerow([scene_id, index, means[compute_ndvi.__name__], sigmas[compute_ndvi.__name__], means[compute_savi.__name__], sigmas[compute_savi.__name__]])
             index = index + 1
     
 if __name__ == '__main__':

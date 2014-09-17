@@ -94,7 +94,23 @@ def combine_landsat_bands(path, ident, f, band_ids):
         band_raster = gdalnumeric.LoadFile(raster_file)
         band_images.append(band_raster)
     return f(band_images)
-    
+
+class LandsatInfo(object):
+    def __init__(self, path, ident):
+        info = os.path.join(path, '%s_MTL.txt' % ident)
+        if not os.path.exists(info):
+            raise IOError("Could not locate metadata for %s at %s", ident, path)
+        with open(info, 'r') as data:
+            lines = data.readlines()
+            self.__info = {}
+            for line in lines:
+                items = line.split('=')
+                if len(items) == 2:
+                    self.__info[items[0].strip()] = items[1].strip()
+                
+    def get_date(self):
+        return self.__info['DATE_ACQUIRED']
+
 def main():
     if len(sys.argv) < 2:
         print "Usage: %s <output-path>" % sys.argv[0]

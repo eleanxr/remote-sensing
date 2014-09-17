@@ -90,7 +90,7 @@ def main():
     
     with (open(os.path.join(output_path, 'results.csv'), 'w')) as dataout:
         csvfile = csv.writer(dataout)
-        csvfile.writerow(["scene_id", "index", "mean_ndvi", "std_dev_ndvi", "mean_savi", "std_savi"])
+        csvfile.writerow(["scene_id", "date", "index", "mean_ndvi", "std_dev_ndvi", "mean_savi", "std_savi"])
         
         numpy.seterr(divide='ignore')
         
@@ -99,12 +99,14 @@ def main():
             logger.debug('Calling combiner for %s', scene_id)
             means = {}
             sigmas = {}
+            info = landsat.LandsatInfo(output_path, scene_id)
+            date = info.get_date()
             for f in compute_ndvi, compute_savi:
                 result_raster = landsat.combine_landsat_bands(output_path, scene_id, f, [landsat.Band.RED, landsat.Band.NIR])
                 write_raster(numpy.ma.masked_invalid(result_raster), output_path, scene_id + '_%s' % f.__name__)
                 means[f.__name__] = numpy.mean(numpy.ma.masked_array(result_raster, numpy.isnan(result_raster)))
                 sigmas[f.__name__] = numpy.std(numpy.ma.masked_array(result_raster, numpy.isnan(result_raster)))
-            csvfile.writerow([scene_id, index, means[compute_ndvi.__name__], sigmas[compute_ndvi.__name__], means[compute_savi.__name__], sigmas[compute_savi.__name__]])
+            csvfile.writerow([scene_id, index, date, means[compute_ndvi.__name__], sigmas[compute_ndvi.__name__], means[compute_savi.__name__], sigmas[compute_savi.__name__]])
             index = index + 1
     
 if __name__ == '__main__':

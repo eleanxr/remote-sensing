@@ -3,6 +3,8 @@ from arcpy import env
 from arcpy.sa import *
 import random
 import os
+import csv
+import numpy as np
 
 def get_float_property(raster, name):
     return float(arcpy.GetRasterProperties_management(raster, name).getOutput(0))
@@ -77,27 +79,83 @@ def create_sample_rasters(path, lo_res_raster_name, hi_res_raster_name, sample_f
 
     count = 0
     for polygon in polygons:
-        # Clip the low resolution raster and save the result.
-        print "Creating training sample %d..." % count
-        arcpy.Clip_management(
-            lo_res_raster,
-            "#",
-            os.path.join(path, "lo_res_%d.tif" % count),
-            polygon.Shape,
-            "#",
-            "ClippingGeometry",
-            "MAINTAIN_EXTENT")
-        arcpy.Clip_management(
-            hi_res_raster,
-            "#",
-            os.path.join(path, "hi_res_%d.tif" % count),
-            polygon.Shape,
-            "#",
-            "ClippingGeometry",
-            "MAINTAIN_EXTENT")
+        lo_res_path = os.path.join(path, "lo_res_%d.tif" % count)
+        hi_res_path = os.path.join(path, "hi_res_%d.tif" % count)
+        if os.path.exists(lo_res_path) and os.path.exists(hi_res_path):
+            print "Skipping sample %d because files exist" % count
+        else:
+            # Clip the low resolution raster and save the result.
+            print "Creating training sample %d..." % count
+            arcpy.Clip_management(
+                lo_res_raster,
+                "#",
+                lo_res_path,
+                polygon.Shape,
+                "#",
+                "ClippingGeometry",
+                "MAINTAIN_EXTENT")
+            arcpy.Clip_management(
+                hi_res_raster,
+                "#",
+                hi_res_path,
+                polygon.Shape,
+                "#",
+                "ClippingGeometry",
+                "MAINTAIN_EXTENT")
         count = count + 1
 
+class ClassificationConstants:
+    GV1 = 1
+    GV2 = 2
+    LIGHT_SOIL = 3
+    DARK_SOIL = 4
+
+def linear_regression(xs, ys):
+    """
+    Compute the linear regression for the ys as predicted by xs.
+    TODO: Install SciPy and use that!
+    Returns m, b where m is the slope and b is the intercept.
+    """
+    # Linear regression is the least squares minimization of
+    # the overdetermined system (x, 1)w = y.
+    A = np.array([xs, np.ones(len(xs))])
+    w = np.linalg.lstsq(A.T, np.array(ys))[0]
+    return w[0], w[1]
+
+def create_regression_model(path, num_samples):
+    xs = []
+    ys = []
+    for i in range(num_samples):
+        lo_res_path = os.path.join(path, "lo_res_%d.tif" % i)
+        cover_path = os.path.join(path, "hi_res_%d_cover.tif" % i)
+        if not os.path.exists(lo_res_path) or not os.path.exists(cover_path):
+            raise Exception("Could not locate data for regression model!")
+        predictor = Raster(lo_res_path)
+        predicted = Raster(cover_path)
+        average_predictor = get_float_property(predictor, "MEAN")
+        cover_array = arcpy.RasterToNumPyArray(predicted)
+        counts = np.bincount(np.ravel(cover_array))
+        frac = float(counts[ClassificationConstants.GV1])/cover_array.size
+        xs.append(average_predictor)
+        ys.append(frac)
+    slope, intercept = linear_regression(xs, ys)
+    with open(os.path.join(path, "model.csv"), "w") as datafile:
+        writer = csv.writer(datafile)
+        writer.writerow(["ndvi", "f_c"])
+        for row in zip(xs, ys):
+            writer.writerow(row)
+    return slope, intercept
+
+def create_regression_raster(raster_name, slope, intercept, output):
+    print "Writing regression raster..."
+    raster = Raster(raster_name)
+    regression_raster = slope * raster + intercept
+    regression_raster.save(output)
+
 def run_sampling(path, lo_res_raster_name, hi_res_raster_name, num_samples):
+    print "Checking out spatial extension..."
+    arcpy.CheckOutExtension("Spatial")
+    
     if not os.path.exists(path):
         os.makedirs(path)
         
@@ -123,6 +181,12 @@ def run_sampling(path, lo_res_raster_name, hi_res_raster_name, num_samples):
         hi_res_raster_name,
         "training.shp")
 
+    # Create the NDVI-Fractional Cover regression model
+    slope, intercept = create_regression_model(training_sample_path, num_samples)
+    print "Regression model: m = %f, b = %f" % (slope, intercept)
+
+    # Write the final raster containing fractional coverages
+    create_regression_raster(lo_res_raster_name, slope, intercept, "fractional_cover.tif")
 
 if __name__ == '__main__':
     run_sampling("C:\\Data\\HackdayFractionalCover", "landsat_ndvi.tif", "13SDU050490_201203_0x2000m_CL_1.jp2", 5)

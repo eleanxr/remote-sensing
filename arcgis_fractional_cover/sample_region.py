@@ -69,6 +69,34 @@ def create_sample_features(samples, raster_name, path, output):
         polygon = arcpy.Polygon(array, spatial_reference)
         arcpy.Append_management(polygon, output, "NO_TEST")
 
+def create_sample_rasters(path, lo_res_raster_name, hi_res_raster_name, sample_feature):
+    lo_res_raster = Raster(lo_res_raster_name)
+    hi_res_raster = Raster(hi_res_raster_name)
+
+    polygons = arcpy.SearchCursor(sample_feature)
+
+    count = 0
+    for polygon in polygons:
+        # Clip the low resolution raster and save the result.
+        print "Creating training sample %d..." % count
+        arcpy.Clip_management(
+            lo_res_raster,
+            "#",
+            os.path.join(path, "lo_res_%d.tif" % count),
+            polygon.Shape,
+            "#",
+            "ClippingGeometry",
+            "MAINTAIN_EXTENT")
+        arcpy.Clip_management(
+            hi_res_raster,
+            "#",
+            os.path.join(path, "hi_res_%d.tif" % count),
+            polygon.Shape,
+            "#",
+            "ClippingGeometry",
+            "MAINTAIN_EXTENT")
+        count = count + 1
+
 def run_sampling(path, lo_res_raster_name, hi_res_raster_name, num_samples):
     if not os.path.exists(path):
         os.makedirs(path)
@@ -84,6 +112,16 @@ def run_sampling(path, lo_res_raster_name, hi_res_raster_name, num_samples):
         create_sample_features(samples, hi_res_raster_name, path, "training.shp")
     else:
         print "Training samples already generated (--resample to override)."
+
+    print "Generating sample rasters..."
+    training_sample_path = os.path.join(path, "training")
+    if not os.path.exists(training_sample_path):
+        os.makedirs(training_sample_path)
+    create_sample_rasters(
+        training_sample_path,
+        lo_res_raster_name,
+        hi_res_raster_name,
+        "training.shp")
 
 
 if __name__ == '__main__':

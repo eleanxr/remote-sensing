@@ -7,23 +7,31 @@ import os
 def get_float_property(raster, name):
     return float(arcpy.GetRasterProperties_management(raster, name).getOutput(0))
 
-def sample_raster(raster_name, num_samples, pixel_width):
+def sample_raster(lo_res_raster_name, hi_res_raster_name, num_samples, pixel_width):
     """
     Returns a list of sampling boxes from a raster, each of a given pixel
     width. The result is a list of tuples of the form
     (top, left, right, bottom).
     """
-    raster = Raster(raster_name)
-    extents = {}
-    prop_names = ("TOP", "LEFT", "RIGHT", "BOTTOM")
-    for prop_name in prop_names:
-        extents[prop_name] = get_float_property(raster, prop_name)
-        print "Low Res Extent %s: %f" % (prop_name, extents[prop_name])
+    hi_res_raster = Raster(hi_res_raster_name)
+    lo_res_raster = Raster(lo_res_raster_name)
+
+    # TODO: Replace with minimum bounding box.
+    hi_res_extent = hi_res_raster.extent
+    extents = {
+        "TOP": float(hi_res_extent.YMax),
+        "LEFT": float(hi_res_extent.XMin),
+        "RIGHT": float(hi_res_extent.XMax),
+        "BOTTOM": float(hi_res_extent.YMin)
+    }
+
+    for name, value in extents.iteritems():
+        print "Extent %s: %f" % (name, value)
 
     # Get the size of each pixel.
     pixel_size = (
-        get_float_property(raster, "CELLSIZEX"),
-        get_float_property(raster, "CELLSIZEY"))
+        get_float_property(lo_res_raster, "CELLSIZEX"),
+        get_float_property(lo_res_raster, "CELLSIZEY"))
     window_size = map(lambda x: x * pixel_width, pixel_size)
 
     print "Generating %d samples with size %s)" % (num_samples, window_size)
@@ -33,8 +41,33 @@ def sample_raster(raster_name, num_samples, pixel_width):
         y = random.uniform(extents["BOTTOM"], extents["TOP"])
         samples.append((y, x, x + window_size[0], y - window_size[1]))
     return samples
+
+def create_sample_features(samples, raster_name, path, output):
+    """
+    Create a shapefile with a set of box samples, each element of samples
+    is a tuple of the form (top, left, right, bottom)
+    """
+    spatial_reference = arcpy.Describe(raster_name).spatialReference
+
+    print "Writing samples feature to %s with spatial reference %s" \
+          % (output, spatial_reference)
+
+    arcpy.CreateFeatureclass_management(path, output, "POLYGON", spatial_reference=spatial_reference)
     
-    
+    for sample in samples:
+        # Samples are of the form (top, left, right, bottom)
+        lower_left = arcpy.Point(sample[1], sample[3])
+        lower_right = arcpy.Point(sample[2], sample[3])
+        upper_right = arcpy.Point(sample[2], sample[0])
+        upper_left = arcpy.Point(sample[1], sample[0])
+
+        array = arcpy.Array()
+        for point in (lower_left, lower_right, upper_right, upper_left):
+            array.add(point)
+        # Close the polygon.
+        array.add(lower_left)
+        polygon = arcpy.Polygon(array, spatial_reference)
+        arcpy.Append_management(polygon, output, "NO_TEST")
 
 def run_sampling(path, lo_res_raster_name, hi_res_raster_name, num_samples):
     if not os.path.exists(path):
@@ -42,8 +75,15 @@ def run_sampling(path, lo_res_raster_name, hi_res_raster_name, num_samples):
         
     env.workspace  = path
     env.overwriteOutput = True
-    
-    points = sample_raster(lo_res_raster_name, num_samples, 3)
+
+    if not os.path.exists(os.path.join(path, "training.shp")):
+        print "No training samples found, generating training samples."
+        # Generate the training samples
+        samples = sample_raster(lo_res_raster_name, hi_res_raster_name, num_samples, 3)
+        # Write a shapefile with the training samples in it.
+        create_sample_features(samples, hi_res_raster_name, path, "training.shp")
+    else:
+        print "Training samples already generated (--resample to override)."
 
 
 if __name__ == '__main__':

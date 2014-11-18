@@ -104,6 +104,15 @@ def create_sample_rasters(path, lo_res_raster_name, hi_res_raster_name, sample_f
                 "MAINTAIN_EXTENT")
         count = count + 1
 
+def classify_samples(path, signature_file, num_samples):
+    for i in range(num_samples):
+        print "Classifying sample %d" % i
+        sample = os.path.join(path, "hi_res_%d.tif" % i)
+        if not os.path.exists(sample):
+            raise Exception("Could not find sample %s" % sample)
+        classified = MLClassify(sample, signature_file)
+        classified.save(os.path.join(path, "hi_res_%d_cover.tif" % i))
+
 class ClassificationConstants:
     GV1 = 1
     GV2 = 2
@@ -135,7 +144,9 @@ def create_regression_model(path, num_samples):
         average_predictor = get_float_property(predictor, "MEAN")
         cover_array = arcpy.RasterToNumPyArray(predicted)
         counts = np.bincount(np.ravel(cover_array))
-        frac = float(counts[ClassificationConstants.GV1])/cover_array.size
+        vegetation_pixels = counts[ClassificationConstants.GV1]
+        frac = float(vegetation_pixels)/cover_array.size
+        print "Sample %d: ndvi = %f, f_c = %f" % (i, average_predictor, frac)
         xs.append(average_predictor)
         ys.append(frac)
     slope, intercept = linear_regression(xs, ys)
@@ -152,7 +163,7 @@ def create_regression_raster(raster_name, slope, intercept, output):
     regression_raster = slope * raster + intercept
     regression_raster.save(output)
 
-def run_sampling(path, lo_res_raster_name, hi_res_raster_name, num_samples):
+def run_sampling(path, lo_res_raster_name, hi_res_raster_name, num_samples, run_regression=False, signature_file=None):
     print "Checking out spatial extension..."
     arcpy.CheckOutExtension("Spatial")
     
@@ -181,13 +192,27 @@ def run_sampling(path, lo_res_raster_name, hi_res_raster_name, num_samples):
         hi_res_raster_name,
         "training.shp")
 
-    # Create the NDVI-Fractional Cover regression model
-    slope, intercept = create_regression_model(training_sample_path, num_samples)
-    print "Regression model: m = %f, b = %f" % (slope, intercept)
+    if signature_file:
+        # Perform the classification of each training sample with the
+        # given signature file.
+        classify_samples(training_sample_path, signature_file, num_samples)
 
-    # Write the final raster containing fractional coverages
-    create_regression_raster(lo_res_raster_name, slope, intercept, "fractional_cover.tif")
+    if run_regression:
+        # Create the NDVI-Fractional Cover regression model
+        slope, intercept = create_regression_model(training_sample_path, num_samples)
+        print "Regression model: m = %f, b = %f" % (slope, intercept)
 
+        # Write the final raster containing fractional coverages
+        create_regression_raster(lo_res_raster_name, slope, intercept, "fractional_cover.tif")
+    else:
+        print "Skipping regression to generate training samples."
+        
 if __name__ == '__main__':
-    run_sampling("C:\\Data\\HackdayFractionalCover", "landsat_ndvi.tif", "13SDU050490_201203_0x2000m_CL_1.jp2", 5)
+    run_sampling(
+        "C:\\Data\\HackdayFractionalCover2",
+        "landsat_ndvi.tif",
+        "13SDU050490_201203_0x2000m_CL_1.jp2",
+        10,
+        True,
+        "C:\\Data\\HackdayFractionalCover\\training\\hi_res_3.gsg")
 

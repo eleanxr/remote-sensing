@@ -38,8 +38,8 @@ def sample_raster(lo_res_raster_name, hi_res_raster_name, num_samples, pixel_wid
     print "Generating %d samples with size %s)" % (num_samples, window_size)
     samples = []
     for i in range(num_samples):
-        x = random.uniform(extents["LEFT"], extents["RIGHT"])
-        y = random.uniform(extents["BOTTOM"], extents["TOP"])
+        x = random.uniform(extents["LEFT"], extents["RIGHT"] - window_size[0])
+        y = random.uniform(extents["BOTTOM"] + window_size[1], extents["TOP"])
         samples.append((y, x, x + window_size[0], y - window_size[1]))
     return samples
 

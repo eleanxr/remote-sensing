@@ -14,7 +14,7 @@ def classify_samples(path, signature_file, num_samples):
         sample = os.path.join(path, "hi_res_%d.tif" % i)
         if not os.path.exists(sample):
             raise Exception("Could not find sample %s" % sample)
-        classified = MLClassify(sample, signature_file)
+        classified = MLClassify(sample, os.path.join(path,signature_file))
         classified.save(os.path.join(path, "hi_res_%d_cover.tif" % i))
 
 class ClassificationConstants:
@@ -67,7 +67,7 @@ def create_regression_raster(raster_name, slope, intercept, output):
     regression_raster = slope * raster + intercept
     regression_raster.save(output)
 
-def measure_coverage(path, signature_file, num_samples):
+def measure_coverage(path, signature_file, num_samples, lo_res_raster_name):
     print "Checking out spatial extension..."
     arcpy.CheckOutExtension("Spatial")
     
@@ -84,15 +84,13 @@ def measure_coverage(path, signature_file, num_samples):
         # given signature file.
         classify_samples(training_sample_path, signature_file, num_samples)
 
-    if run_regression:
-        # Create the NDVI-Fractional Cover regression model
-        slope, intercept = create_regression_model(training_sample_path, num_samples)
-        print "Regression model: m = %f, b = %f" % (slope, intercept)
+    
+    # Create the NDVI-Fractional Cover regression model
+    slope, intercept = create_regression_model(training_sample_path, num_samples)
+    print "Regression model: m = %f, b = %f" % (slope, intercept)
 
-        # Write the final raster containing fractional coverages
-        create_regression_raster(lo_res_raster_name, slope, intercept, "fractional_cover.tif")
-    else:
-        print "Skipping regression to generate training samples."
+    # Write the final raster containing fractional coverages
+    create_regression_raster(lo_res_raster_name, slope, intercept, "fractional_cover.tif")
 
 if __name__ == "__main__":
-    measure_coverage("C:\\Data\\HackdayFractionalCover2", None, 10)
+    measure_coverage("C:\\Data\\FractionalCoverDemo3", "hi_res_0.gsg", 5, "ndvi_landsat_13SDU05049011.tif")

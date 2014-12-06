@@ -136,8 +136,8 @@ def run_sampling(path, lo_res_raster_name, hi_res_raster_name, num_samples):
         
 if __name__ == '__main__':
     run_sampling(
-        "C:\\Data\\FractionalCoverDemo",
-        "landsat_ndvi.tif",
+        "C:\\Data\\FractionalCoverDemo3",
+        "ndvi_landsat_13SDU05049011.tif",
         "13SDU050490_201203_0x2000m_CL_1.jp2",
-        10)
+        5)
 

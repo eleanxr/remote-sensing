@@ -79,7 +79,7 @@ class arcgis_raster(object):
         
         count = 0
         for feature_item in feature_items:
-            output_path = os.path.join(self.path, "%s_%d.tif" % (output, count)
+            output_path = os.path.join(self.path, "%s_%d.tif" % (output, count))
             arcpy.Clip_management(
                 self.raster,
                 "#",

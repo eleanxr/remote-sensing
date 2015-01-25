@@ -4,6 +4,7 @@ from distutils.core import setup
 
 base_requirements = [
     "numpy", # Probably need to fix a compatibility version here
+    "PyContracts==1.7.1"
 ]
 
 gdal_kernel_requirements = [

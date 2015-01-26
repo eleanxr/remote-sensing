@@ -19,8 +19,10 @@ setup(
     name="RemoteSensingTools",
     version="0.1",
     description="Remote Sensing Tools",
+    url="http://wdicharry.github.io",
     author="Will Dicharry",
     author_email="wdicharry@gmail.com",
-    install_requires=requirements)
+    install_requires=requirements,
+    test_suite="tests")
 
 

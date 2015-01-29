@@ -29,6 +29,7 @@ def create_sample_features(samples, raster, output):
     Create a shapefile with a set of box samples, each element of samples
     is a tuple of the form (top, left, right, bottom)
     """
+    feature = raster.create_feature(output)
     for s in samples:
         polygon = [
             (s[0], s[1]),
@@ -36,7 +37,7 @@ def create_sample_features(samples, raster, output):
             (s[3], s[2]),
             (s[3], s[1]),
         ]
-        raster.create_feature(output, polygon)
+        feature.add_polygon(polygon)
 
 def create_sample_rasters(lo_res_raster, hi_res_raster, sample_feature):
     lo_res_raster.clip(sample_feature, "lo_res")

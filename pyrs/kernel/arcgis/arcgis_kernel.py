@@ -24,6 +24,24 @@ class arcgis_registry(object):
         """
         return arcgis_raster(self.path, filename)
 
+class arcgis_feature(object):
+    def __init__(self, path, name, spatial_reference):
+        self.path = path
+        self.name = name
+        self.spatial_reference = spatial_reference
+        
+    def add_polygon(self, polygon):
+        """Add a polygon to this feature.
+        """
+        points = [arcpy.Point(p[0], p[1]) for p in polygon]
+        array = arcpy.Array()
+        for point in points:
+            array.add(point)
+        array.add(points[0]) # close the polygon
+        polygon = arcpy.Polygon(array, self.spatial_reference)
+        arcpy.Append_management(polygon, self.name, "NO_TEST")
+        
+
 class arcgis_raster(object):
     def __init__(self, path, raster_name):
         self.path = path
@@ -47,30 +65,13 @@ class arcgis_raster(object):
             get_float_property(self.raster, "CELLSIZEX"),
             get_float_property(self.raster, "CELLSIZEY"))
 
-
-    def create_feature(self, output, polygon):
-        """
-        Create a polygonal feature using the spatial reference
-        of this raster.
-        
-        Parameters
-        ----------
-        output : str
-        polygon : iterable set of (x, y) tuples.
-
-        Returns
-        -------
-        Feature
+    def create_feature(self, output):
+        """Create a feature using this raster's spatial reference.
         """
         spatial_reference = arcpy.Describe(self.raster_name)
-        points = [arcpy.Point(p[0], p[1]) for p in polygon]
-        array = arcpy.Array()
-        for point in points:
-            array.add(point)
-        array.add(points[0]) # close the polygon
-        polygon = arcpy.Polygon(array, spatial_reference)
-        arcpy.Append_management(polygon, output, "NO_TEST")
-
+        arcpy.CreateFeatureclass_management(self.path, output, "POLYGON", spatial_reference=spatial_reference)
+        return arcgis_feature(self.path, output, spatial_reference)
+    
     def clip(self, feature, output):
         """
         Clip this raster given a feature.

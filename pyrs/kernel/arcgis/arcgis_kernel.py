@@ -62,8 +62,8 @@ class arcgis_raster(object):
         -------
         Feature
         """
-        spatial_reference = arcpy.Describy(self.raster_name)
-        points = map(lambda p: arcpy.Point(p[0], p[1]), polygon)
+        spatial_reference = arcpy.Describe(self.raster_name)
+        points = [arcpy.Point(p[0], p[1]) for p in polygon]
         array = arcpy.Array()
         for point in points:
             array.add(point)

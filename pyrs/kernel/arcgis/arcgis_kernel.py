@@ -7,6 +7,9 @@ from arcpy.sa import *
 
 from utils import *
 
+import logging
+logger = logging.getLogger(__name__)
+
 class arcgis_registry(object):
     def __init__(self, path):
         self.path = path
@@ -68,7 +71,8 @@ class arcgis_raster(object):
     def create_feature(self, output):
         """Create a feature using this raster's spatial reference.
         """
-        spatial_reference = arcpy.Describe(self.raster_name)
+        spatial_reference = arcpy.Describe(self.raster_name).spatialReference
+        logger.debug("CreateFeatureclass_management arguments: %s %s %s %s", self.path, output, "POLYGON", spatial_reference)
         arcpy.CreateFeatureclass_management(self.path, output, "POLYGON", spatial_reference=spatial_reference)
         return arcgis_feature(self.path, output, spatial_reference)
     
@@ -76,17 +80,22 @@ class arcgis_raster(object):
         """
         Clip this raster given a feature.
         """
-        feature_items = arcpy.SearchCursor(feature)
+        this_path = os.path.join(self.path, self.raster_name)
+        feature_path = os.path.join(feature.path, feature.name)
+        logger.debug("Clipping %s by %s", this_path, feature_path)
+        feature_items = arcpy.SearchCursor(feature_path)
         
         count = 0
         for feature_item in feature_items:
             output_path = os.path.join(self.path, "%s_%d.tif" % (output, count))
+            logger.debug("Clip raster %s to %s", self.raster_name, output_path)
             arcpy.Clip_management(
                 self.raster,
                 "#",
                 output_path,
-                polygon.Shape,
+                feature_item.Shape,
                 "#",
                 "ClippingGeometry",
                 "MAINTAIN_EXTENT")
+            count = count + 1
 

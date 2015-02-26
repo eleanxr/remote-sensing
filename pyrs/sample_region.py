@@ -3,6 +3,9 @@ import os
 import csv
 import numpy as np
 
+import logging
+logger = logging.getLogger(__name__)
+
 def sample_raster(lo_res_raster, hi_res_raster, num_samples, pixel_width):
     """
     Returns a list of sampling boxes from a raster, each of a given pixel
@@ -11,12 +14,13 @@ def sample_raster(lo_res_raster, hi_res_raster, num_samples, pixel_width):
     """
     # TODO: Replace with minimum bounding box.
     hi_res_extent = hi_res_raster.get_extent()
+    logger.debug("Sample extent bounds: %s", hi_res_extent)
 
     # Get the size of each pixel.
     pixel_size = lo_res_raster.get_pixel_size()
     window_size = map(lambda x: x * pixel_width, pixel_size)
 
-    print "Generating %d samples with size %s)" % (num_samples, window_size)
+    logger.info("Generating %d samples with size %s)" % (num_samples, window_size))
     samples = []
     for i in range(num_samples):
         x = random.uniform(hi_res_extent[1], hi_res_extent[2] - window_size[0])
@@ -31,13 +35,15 @@ def create_sample_features(samples, raster, output):
     """
     feature = raster.create_feature(output)
     for s in samples:
+        logger.debug("Adding polygon: %s", s)
         polygon = [
-            (s[0], s[1]),
-            (s[0], s[2]),
-            (s[3], s[2]),
-            (s[3], s[1]),
+            (s[1], s[3]),
+            (s[2], s[3]),
+            (s[2], s[0]),
+            (s[1], s[0]),
         ]
         feature.add_polygon(polygon)
+    return feature
 
 def create_sample_rasters(lo_res_raster, hi_res_raster, sample_feature):
     lo_res_raster.clip(sample_feature, "lo_res")
@@ -50,15 +56,12 @@ def run_sampling(registry, lo_res_raster_name, hi_res_raster_name, num_samples):
     # Generate the training samples
     samples = sample_raster(lo_res_raster, hi_res_raster, num_samples, 3)
     # Write a shapefile with the training samples in it.
-    create_sample_features(samples, hi_res_raster, "training.shp")
+    sample_feature = create_sample_features(samples, hi_res_raster, "training.shp")
 
-    print "Generating sample rasters..."
-    training_sample_path = os.path.join(path, "training")
-    if not os.path.exists(training_sample_path):
-        os.makedirs(training_sample_path)
+    logger.info("Generating sample rasters")
     create_sample_rasters(
         lo_res_raster,
         hi_res_raster,
-        "training.shp")
+        sample_feature)
 
 

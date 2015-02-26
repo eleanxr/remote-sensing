@@ -1,6 +1,9 @@
 from kernel.arcgis.arcgis_kernel import arcgis_registry
 import sample_region
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 def sample_rasters():
     registry = arcgis_registry("C:\\Data\\TestSampling")
     sample_region.run_sampling(

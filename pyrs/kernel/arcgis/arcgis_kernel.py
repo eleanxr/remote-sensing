@@ -5,6 +5,8 @@ import arcpy
 from arcpy import env
 from arcpy.sa import *
 
+import sys
+
 from utils import *
 
 import logging
@@ -26,6 +28,20 @@ class arcgis_registry(object):
         Open a raster from a file.
         """
         return arcgis_raster(self.path, filename)
+        
+    def create_composite(self, filename, *rasters):
+        """Create a composite raster from a set of rasters.
+        filename : The name of the file to save the composite raster to
+        returns a raster.
+        """
+        raster_arg = ";".join([raster.raster_name for raster in rasters])
+        logger.debug("Creating composite %s from bands %s", filename, raster_arg)
+        try:
+            arcpy.CompositeBands_management(raster_arg, filename)
+            return arcgis_raster(self.path, filename)
+        except:
+            logger.error("failed to create composite %s: %s", filename, arcpy.GetMessages())
+    
 
 class arcgis_feature(object):
     def __init__(self, path, name, spatial_reference):

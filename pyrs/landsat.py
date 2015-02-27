@@ -3,12 +3,10 @@ import tarfile
 import sys
 import shutil
 
-from osgeo import gdal, gdalnumeric, ogr, osr
-
 import numpy
 
 import logging
-logger = logging.getLogger(os.path.basename(__file__))
+logger = logging.getLogger(__name__)
 
 class Band:
     COASTAL_AEROSOL = 1
@@ -54,6 +52,25 @@ def is_band(bands, tarinfo):
             logger.debug("Found band %d in file '%s'", band, tarinfo.name)
             return True
     return False
+    
+def read_bands(registry, data_path, landsat_file, bands):
+    """Read a set of bands from a landsat data download
+    Returns a set of rasters containing the requested bands.
+    """
+    identifier = os.path.splitext(os.path.splitext(os.path.basename(landsat_file))[0])[0]
+    logger.debug("Reading members from %s", landsat_file)
+    archive = tarfile.open(os.path.join(data_path, landsat_file))
+    members = archive.getmembers()
+    rasters = filter(lambda i: is_band(bands, i), members)
+    metadata = filter(lambda i: os.path.splitext(i.name)[1].lower() == '.txt', members)
+    # Extract them.
+    logger.debug("Extracting bands %s from %s", bands, landsat_file)
+    archive.extractall(data_path, rasters + metadata)
+    result = []
+    for raster in rasters:
+        logger.debug("Adding %s to the result set.", raster.name)
+        result.append(registry.open_raster(raster.name))
+    return result
     
 def process_landsat_bundle(landsat_download, output_path, transform_path, bands, raster_transform):
     """

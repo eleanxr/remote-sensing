@@ -66,52 +66,16 @@ def read_bands(registry, data_path, landsat_file, bands):
     # Extract them.
     logger.debug("Extracting bands %s from %s", bands, landsat_file)
     archive.extractall(data_path, rasters + metadata)
+    info = LandsatInfo(data_path, identifier)
     result = []
-    for raster in rasters:
-        logger.debug("Adding %s to the result set.", raster.name)
-        result.append(registry.open_raster(raster.name))
+    for band in bands:
+        band_file = os.path.join(data_path, info.get_band_file(band))
+        if not os.path.exists(band_file):
+            raise IOError("Failed to find %s" % info.get_band_file(band))
+        logger.debug("Adding %s to the result set.", info.get_band_file(band))
+        result.append(registry.open_raster(info.get_band_file(band)))
     return result
     
-def process_landsat_bundle(landsat_download, output_path, transform_path, bands, raster_transform):
-    """
-    Applies a transformation to a landsat bundle.
-    raster_transform is a function that takes a path to a raster and an output
-    path in which to save its results.
-    Returns the identifier for the bundle.
-    """
-    identifier = os.path.splitext(os.path.splitext(os.path.basename(landsat_download))[0])[0]
-    archive = tarfile.open(landsat_download)
-    members = archive.getmembers()
-    rasters = filter(lambda i: is_band(bands, i), members)
-    metadata = filter(lambda i: os.path.splitext(i.name)[1].lower() == '.txt', members)
-    # Extract them.
-    archive.extractall(output_path, rasters + metadata)
-    # Always retain the metadata
-    for f in metadata:
-        shutil.copy(os.path.join(output_path, f.name), transform_path)
-    # Process them
-    for raster in rasters:
-        raster_path = os.path.join(output_path, raster.name)
-        raster_transform(raster_path, transform_path)
-    return identifier
-        
-def combine_landsat_bands(path, ident, f, band_ids):
-    """
-    Perform some function to combine a set of bands in landsat imagery.
-    - ident : The identifier for the image bundle
-    - f : The function to apply. Takes a single argument, a list of numpy arrays.
-    - band_ids : The band ids to map (in the same order as the argument to f)
-    """
-    band_images = []
-    for band_id in band_ids:
-        raster_file = os.path.join(path, '%s_B%d.tif' % (ident, band_id))
-        logger.debug('Loading band raster %s', raster_file)
-        if not os.path.exists(raster_file):
-            raise IOError("Failed to locate file %s" % raster_file)
-        band_raster = gdalnumeric.LoadFile(raster_file)
-        band_images.append(band_raster)
-    return f(band_images)
-
 class LandsatInfo(object):
     def __init__(self, path, ident):
         info = os.path.join(path, '%s_MTL.txt' % ident)
@@ -127,6 +91,10 @@ class LandsatInfo(object):
                 
     def get_date(self):
         return self.__info['DATE_ACQUIRED']
+    
+    def get_band_file(self, band):
+        return self.__info['FILE_NAME_BAND_%d' % band][1:-1]
+    
 
 def main():
     if len(sys.argv) < 2:

@@ -5,6 +5,7 @@ import sys
 import os
 
 from osgeo import gdal, ogr
+import gdal_merge
 
 import logging
 logger = logging.getLogger(__name__)
@@ -24,7 +25,9 @@ class gdal_registry(object):
         filename : The name of the file to save the composite raster to
         returns a raster.
         """
-        pass
+        gdal_merge_args = ["-o", os.path.join(self.path, filename), "-separate"] \
+            + [os.path.join(raster.path, raster.name) for raster in rasters]
+        gdal_merge.main(gdal_merge_args)
 
 class gdal_feature(object):
     def __init__(self, path, name, spatial_reference):

@@ -25,8 +25,12 @@ class gdal_registry(object):
         filename : The name of the file to save the composite raster to
         returns a raster.
         """
-        gdal_merge_args = ["-o", os.path.join(self.path, filename), "-separate"] \
-            + [os.path.join(raster.path, raster.name) for raster in rasters]
+        outfile = os.path.join(self.path, filename)
+        if os.path.exists(outfile):
+            os.remove(outfile)
+        gdal_merge_args = ["-co PHOTOMETRIC=RGB", "-o", os.path.join(self.path, filename), "-separate"] \
+            + [os.path.join(raster.path, raster.raster_name) for raster in rasters]
+        logger.debug("calling gdal_merge with '%s'", ' '.join(gdal_merge_args))
         gdal_merge.main(gdal_merge_args)
 
 class gdal_feature(object):

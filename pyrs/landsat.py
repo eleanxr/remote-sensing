@@ -52,12 +52,17 @@ def is_band(bands, tarinfo):
             logger.debug("Found band %d in file '%s'", band, tarinfo.name)
             return True
     return False
-    
+
+def get_scene_id_from_filename(filename):
+    return os.path.splitext(os.path.splitext(os.path.basename(filename))[0])[0]
+
+      
 def read_bands(registry, data_path, landsat_file, bands):
     """Read a set of bands from a landsat data download
-    Returns a set of rasters containing the requested bands.
+    Returns (info, rasters) where info is a LandsatInfo instance with information
+    about the Landsat scene and rasters is a list of all requested bands.
     """
-    identifier = os.path.splitext(os.path.splitext(os.path.basename(landsat_file))[0])[0]
+    identifier = get_scene_id_from_filename(landsat_file)
     logger.debug("Reading members from %s", landsat_file)
     archive = tarfile.open(os.path.join(data_path, landsat_file))
     members = archive.getmembers()
@@ -74,7 +79,7 @@ def read_bands(registry, data_path, landsat_file, bands):
             raise IOError("Failed to find %s" % info.get_band_file(band))
         logger.debug("Adding %s to the result set.", info.get_band_file(band))
         result.append(registry.open_raster(info.get_band_file(band)))
-    return result
+    return info, result
     
 class LandsatInfo(object):
     def __init__(self, path, ident):
@@ -94,6 +99,10 @@ class LandsatInfo(object):
     
     def get_band_file(self, band):
         return self.__info['FILE_NAME_BAND_%d' % band][1:-1]
+        
+    def get_scene_id(self):
+        return self.__info['LANDSAT_SCENE_ID'][1:-1]
+    
     
 
 def main():

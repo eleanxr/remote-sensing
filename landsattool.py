@@ -23,6 +23,8 @@ def main():
     parser.add_argument("landsat_download")
     parser.add_argument("output_file")
     parser.add_argument("--bands", nargs="+", default=[4,3,2])
+    parser.add_argument("--publish")
+    parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
     
     data_path = os.path.dirname(args.landsat_download)
@@ -38,8 +40,19 @@ def main():
     except:
         registry = get_gdal_registry(data_path)
     
-    rasters = pyrs.landsat.read_bands(registry, data_path, landsat_file, bands)
-    registry.create_composite(args.output_file, *rasters)
+    if args.overwrite or not os.path.exists(os.path.join(data_path, args.output_file)):
+        info, rasters = pyrs.landsat.read_bands(registry, data_path, landsat_file, bands)
+        composite_raster = registry.create_composite(args.output_file, *rasters)
+    else:
+        info = pyrs.landsat.LandsatInfo(data_path, pyrs.landsat.get_scene_id_from_filename(landsat_file))
+        composite_raster = registry.open_raster(args.output_file)
+        print("{} already exists. Use --overwrite to recompute.".format(args.output_file))
+    
+    if (args.publish and composite_raster):
+        logger.info("Publishing result for %s to %s", info.get_scene_id(), args.publish)
+        publisher = registry.get_publishing_service(args.publish.strip())
+        publisher.publish_image(composite_raster, info)
+        
     
 if __name__ == '__main__':
     main()

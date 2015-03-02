@@ -41,6 +41,11 @@ class arcgis_registry(object):
             return arcgis_raster(self.path, filename)
         except:
             logger.error("failed to create composite %s: %s", filename, arcpy.GetMessages())
+            
+    def get_publishing_service(self, uri):
+        return arcgis_publishing_service(self.path, uri)
+    
+    
     
 
 class arcgis_feature(object):
@@ -115,3 +120,46 @@ class arcgis_raster(object):
                 "MAINTAIN_EXTENT")
             count = count + 1
 
+class arcgis_publishing_service(object):
+    def __init__(self, data_path, uri):
+        self.data_path = data_path
+        self.uri = uri
+        
+    def publish_image(self, raster, info, remote_path = None, description = None, tags = None):
+        data = os.path.join(self.data_path, raster.raster_name)
+        name = info.get_scene_id()
+        sddraft = os.path.join(self.data_path, name + ".sddraft")
+        sd = os.path.join(self.data_path, name + ".sd")
+        
+        tags_string = None
+        if tags:
+            tags_string = ",".join(tags)
+        
+        try:
+            arcpy.CreateImageSDDraft(data, sddraft, name, 'ARCGIS_SERVER', None, True, remote_path, description, tags_string)
+        except Exception as error:
+            logger.error(arcpy.GetMessages())
+            logger.error("Failed to create image service definition: %s", error[0])
+            raise error
+            
+        analysis = arcpy.mapping.AnalyzeForSD(sddraft)
+        for key in analysis.keys():
+            print("==={}===".format(key.upper()))
+            for ((message, code), layerlist) in analysis[key].iteritems():
+                print("    {} (CODE {})".format(message, code))
+                print("       applies to: {}".format(
+                    " ".join([layer.name for layer in layerlist])))
+        
+        if not analysis["errors"]:
+            try:
+                logger.info("Staging service definition %s to %s", sddraft, sd)
+                arcpy.StageService_server(sddraft, sd)
+                logger.info("Uploading image service %s to %s", sd, self.uri)
+                arcpy.UploadServiceDefinition_server(sd, self.uri)
+            except arcpy.ExecuteError:
+                logger.error(arcpy.GetMessages())
+            except Exception as error:
+                logger.error("Failed to publish image service: %s", error)
+                
+        
+            

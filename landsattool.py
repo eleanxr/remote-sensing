@@ -20,11 +20,11 @@ def get_gdal_registry(data_path):
     
 def main():
     parser = argparse.ArgumentParser(description="Tool for bulk processing Landsat imagery")
-    parser.add_argument("landsat_download")
-    parser.add_argument("output_file")
-    parser.add_argument("--bands", nargs="+", default=[4,3,2])
-    parser.add_argument("--publish")
-    parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("landsat_download", help="The name of the Landsat download to process")
+    parser.add_argument("output_file", help="The name of the raster to save results to")
+    parser.add_argument("--bands", nargs="+", default=[4,3,2], help="The spectral bands to build the composite image from")
+    parser.add_argument("--publish", help="The name of the image server instance to publish the result to")
+    parser.add_argument("--overwrite", action="store_true", help="Overwrite results if they already exist")
     args = parser.parse_args()
     
     data_path = os.path.dirname(args.landsat_download)

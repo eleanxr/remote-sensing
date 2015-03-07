@@ -1,8 +1,36 @@
-= Remote Sensing Tools
+# Remote Sensing Tools
 
-This repository contains a set of tools for remote sensing. Currently, the
-project has 3 tools, some of which depend on the ArcGIS API.
+A set of tools and Python libraries to automate various tasks involved in
+remote sensing.
 
-1. A tool for processing Landsat imagery and extracting bands and regions of interest.
-2. A tool for sampling an area and extracting matching areas from different images with different resolutions.
-3. A tool for building a regression model from classified imagery and computing fractional cover using that model and NDVI from a Landsat image.
+## Executable Tools
+
+### landsattool.py
+
+A tool to build image composites from Landsat 8 OLI/TIRS datasets. It supports
+using either GDAL or ArcGIS as its GIS layer and builds composite images from
+individual bands in a Landsat 8 download. Does not require extracting the
+downloaded tar.gz file prior to operation.
+
+#### Examples
+
+Build a true color image from a downloaded Landsat 8 OLI/TIRS bundle:
+
+```
+$ python landsattool.py LC80340352014167LGN00.tar.gz visible.tif
+```
+
+Build an image using SWIR for red, NIR for green, and coastal aerosol for blue:
+
+```
+$ python landsattool.py --bands 7 5 1 -- LC80340352014167LGN00.tar.gz visible.tif
+```
+
+## Framework and API
+
+The `pyrs` package contains a collection of Python modules that can be used to
+automate image processing in other Python applications. The top level modules
+are built using GIS kernels, the implementations of which are defined in the
+`python.kernel` package. The GIS kernels are expected to provide the underlying
+image I/O and GIS operations that algorithms defined in the top level package
+may utilize for their analyses.

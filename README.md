@@ -5,6 +5,26 @@ remote sensing.
 
 ## Executable Tools
 
+### sample_region.py
+
+A tool to sample low and high resolution datasets covering the same area in order to build correlative models mapping one to the other.
+
+#### Examples
+
+Take 10 samples of a Landsat image and a high resolution visible image and write a feature containing the samples:
+
+```
+sample_region.run_sampling(
+    registry,
+    "ndvi_landsat_13SDU05049011.tif",
+    "13SDU050490_201203_0x2000m_CL_1.jp2",
+    5)
+```
+
+### measure_coverage.py
+
+Take a set of small-scale classified images and build a regression model to estimate fractional coverage over a larger, lower resolution dataset.
+
 ### landsattool.py
 
 A tool to build image composites from Landsat 8 OLI/TIRS datasets. It supports
